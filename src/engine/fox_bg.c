@@ -687,6 +687,32 @@ void Background_DrawBackdrop(void) {
 
                     Matrix_RotateZ(gGfxMatrix, gStarfieldRoll, MTXF_APPLY);
 
+#if defined(TARGET_XBOX)
+                    /* XBOX: widescreen -- the backdrop repeats every 480 of the
+                       starfield's scroll (a quarter turn), and the wrap above moves
+                       it from 100 past the 4:3 picture's right edge to 60 past its
+                       left: out of sight on 4:3, in sight on 16:9, which shows 53
+                       more each side -- the planet jumped across the screen. On
+                       16:9 the copies a period either side are drawn too while on
+                       screen (the backdrop sits at bgXpos + 40 across), so one
+                       slides off as the next slides on. */
+                    {
+                        f32 bgXpos0 = bgXpos;
+                        s32 copy;
+
+                        for (copy = 0; copy < 3; copy++) {
+                            if (copy != 0) {
+                                if (!xbox_widescreen_active()) {
+                                    break;
+                                }
+                                bgXpos = bgXpos0 + ((copy == 1) ? -480.0f : 480.0f);
+                                if (fabsf(bgXpos + 40.0f - 160.0f) > (160.0f + XBOX_WS_EXTRA + 400.0f)) {
+                                    continue;
+                                }
+                            }
+                            XboxInterp_Push(&gStarfieldX, 0x90020 + copy); // XBOX: 60 fps tag, per copy
+                            Matrix_Push(&gGfxMatrix);
+#endif
                     switch (levelId) {
                         case LEVEL_WARP_ZONE:
                             if ((s32) gWarpZoneBgAlpha != 0) {
@@ -802,6 +828,13 @@ void Background_DrawBackdrop(void) {
                             gSPDisplayList(gMasterDisp++, aSyBackdropDL);
                             break;
                     }
+#if defined(TARGET_XBOX)
+                            Matrix_Pop(&gGfxMatrix);
+                            XboxInterp_Pop();
+                        }
+                        bgXpos = bgXpos0;
+                    }
+#endif
 
                 }
                 Matrix_Pop(&gGfxMatrix);

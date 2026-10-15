@@ -179,6 +179,7 @@ static int sDispBars;               /* the picture is not the whole screen */
 static int sDisp16x9;               /* the screen is 16:9 (720p, or anamorphic 480) */
 static int sWsActive;               /* widescreen picture this frame */
 static IDirect3DSurface8 *sTargetNow;  /* the render target set last (set_target) */
+static int sAutosort = 1;              /* pvr_init: the TR list autosorted (the port's) */
 
 /* this scene's: the display's, or 1, 0, 0 for a scene drawn to a texture,
  * which is in game pixels */
@@ -1406,7 +1407,17 @@ static void apply_state(const XbState *s)
         return;
     sApplied = s;
 
-    IDirect3DDevice8_SetRenderState(d, D3DRS_ZFUNC, kCmp[s->depth_cmp & 7]);
+    /* The PVR sorts its translucent list per pixel by depth when autosort is
+     * on -- the port's mode (gfx_pvr.c) -- and there a polygon's own depth
+     * compare is not used: every one is drawn nearest-wins. The port leans
+     * on it: a backdrop the N64 paints first with its depth test off (a
+     * space level's planet) is given a far depth (gfx_retro_dc.c's far
+     * slab) and on the Dreamcast sorts behind the ships drawn after it.
+     * Taken at its word here, "always" would paint it over them. */
+    if (s->list == PVR_LIST_TR_POLY && sAutosort && (s->depth_cmp & 7) == PVR_DEPTHCMP_ALWAYS)
+        IDirect3DDevice8_SetRenderState(d, D3DRS_ZFUNC, D3DCMP_GREATEREQUAL);
+    else
+        IDirect3DDevice8_SetRenderState(d, D3DRS_ZFUNC, kCmp[s->depth_cmp & 7]);
     IDirect3DDevice8_SetRenderState(d, D3DRS_ZWRITEENABLE, s->depth_write ? TRUE : FALSE);
     IDirect3DDevice8_SetRenderState(d, D3DRS_CULLMODE, s->cull == PVR_CULLING_CCW ? D3DCULL_CCW
                                       : s->cull == PVR_CULLING_CW ? D3DCULL_CW : D3DCULL_NONE);
@@ -1730,7 +1741,8 @@ int pvr_init(const pvr_init_params_t *params)
     uint8_t *base;
     HRESULT hr;
 
-    (void)params;               /* bin sizes and vertex buffers are the TA's */
+    /* bin sizes and vertex buffers are the TA's; the sort mode is kept */
+    sAutosort = (params == NULL) || !params->autosort_disabled;
     if (sInited)
         return 0;
 
