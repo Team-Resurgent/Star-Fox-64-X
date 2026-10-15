@@ -1,0 +1,12 @@
+// Dashboard save icon (64x64): see titleimage.rdf.
+
+out_version        XPR0
+out_packedresource gen/saveimage.xbx
+out_header         gen/saveimage.h
+
+Texture SaveImage
+{
+   Source gen/saveimage.bmp
+   Format D3DFMT_DXT1
+   Levels 1
+}

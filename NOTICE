@@ -1,0 +1,45 @@
+Third-party projects
+
+  sf64                 https://github.com/sonicdcer/sf64
+                       The Star Fox 64 decompilation (CC0). Its sources are
+                       the game code built here.
+  sf64-dc              https://github.com/jnmartin84/sf64-dc
+                       jnmartin84's Dreamcast port (CC0), which this
+                       repository is: its game code, renderer, audio
+                       encoder and tools, with the Xbox port's changes
+                       marked XBOX:.
+  Torch                https://github.com/HarbourMasters/Torch
+                       The asset extractor (MIT). Not committed here:
+                       setup.py fetches it into tools/Torch at the revision
+                       it pins (TORCH_REV), and its CMake build downloads
+                       its own libraries (libgfxd, GSL, yaml-cpp, spdlog,
+                       tinyxml2), each under its own license.
+  Starship             https://github.com/HarbourMasters/Starship
+                       The PC port (CC0). The options menu's fixes, cutscene
+                       timings, cheats, enhancements and restorations follow
+                       its code, and its beta boost-gauge needle art is
+                       converted into Platform/xbox/xbox_beta_gauge.h.
+  KallistiOS           https://github.com/KallistiOS/KallistiOS
+                       The Dreamcast OS. Platform/xbox/ reimplements the part
+                       of its API the game uses, with KOS's own names, types,
+                       constants and struct layouts, and carries code ported
+                       from KOS itself, which stays under the KOS License
+                       (Platform/xbox/LICENSE.KOS):
+                         dc/sound/aica_comm.h (copied unchanged),
+                         aica_cmd_iface.h and aica.h
+                           (sound/arm/aica_cmd_iface.h, aica.h),
+                         aica/aica_fw_xbox.c (sound/arm/main.c, aica.c),
+                         aica/aica_bus_xbox.c (sound/snd_mem.c, snd_iface.c),
+                         kos_snd_stream_xbox.c (sound/snd_stream.c),
+                         kos_vmu_pkg.c (util/vmu_pkg.c),
+                         pvr_xbox.c: the texture twiddle
+                           (hardware/pvr/pvr_texture.c) and the polygon
+                           header compiler (hardware/pvr/pvr_prim.c).
+  RXDK                 Team Resurgent's original-Xbox development kit: the
+                       toolchain, SDK and Visual Studio integration the
+                       build uses. Installed separately, not part of this
+                       repository.
+
+Star Fox and Nintendo 64 are trademarks of Nintendo. Dreamcast is a trademark
+of Sega. Xbox is a trademark of Microsoft. This project is not affiliated
+with or endorsed by any of them.

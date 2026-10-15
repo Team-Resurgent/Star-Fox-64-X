@@ -1,0 +1,97 @@
+D_Gfx_800D94D0 = 0x800D94D0; // type:Gfx
+D_Gfx_800D95E8 = 0x800D95E8; // type:Gfx
+D_Gfx_800D9688 = 0x800D9688; // type:Gfx
+D_Gfx_800D96D0 = 0x800D96D0; // type:Gfx
+D_Gfx_800D9860 = 0x800D9860; // type:Gfx
+D_Gfx_800D9990 = 0x800D9990; // type:Gfx
+D_Gfx_800DA9F8 = 0x800DA9F8; // type:Gfx
+D_Gfx_800DAA98 = 0x800DAA98; // type:Gfx
+D_Gfx_800DAB28 = 0x800DAB28; // type:Gfx
+D_Gfx_800DAB80 = 0x800DAB80; // type:Gfx
+aCoHighwayShadowDL = 0x800DAC20; // type:Gfx
+D_Gfx_800DACA0 = 0x800DACA0; // type:Gfx
+gRcpInitDL = 0x800DBAA0; // type:Gfx
+
+aCoHighwayShadowTex = 0x800DA1F8;
+D_Tex_800D99F8 = 0x800D99F8;
+gTextCharPalettes = 0x800DBA20;
+
+D_Vtx_800D94A0 = 0x800D94A0;
+D_Vtx_800D94E8 = 0x800D94E8;
+D_Vtx_800D9658 = 0x800D9658;
+D_Vtx_800D96A0 = 0x800D96A0;
+D_Vtx_800D9760 = 0x800D9760;
+D_Vtx_800D9950 = 0x800D9950;
+D_Vtx_800D9910 = 0x800D9910;
+D_Vtx_800DAA58 = 0x800DAA58;
+D_Vtx_800DAAF8 = 0x800DAAF8;
+D_Vtx_800DAB40 = 0x800DAB40;
+aCoHighwayShadowVTX = 0x800DABE0;
+D_Vtx_800DAC80 = 0x800DAC80;
+
+D_Tex_800DACB8 = 0x800DACB8;
+D_Tex_800DB4B8 = 0x800DB4B8;
+D_Unk_800D96E8 = 0x800D96E8; // type:s16
+
+gSawtoothWaveSample = 0x800DBB10; // size:0x200 type:s16
+gTriangleWaveSample = 0x800DBD10; // size:0x200 type:s16
+gSineWaveSample = 0x800DBF10; // size:0x200 type:s16
+gSquareWaveSample = 0x800DC110; // size:0x200 type:s16
+gWhiteNoiseSample = 0x800DC310; // size:0x200 type:s16
+gUnkSample = 0x800DC510; // size:0x200 type:s16
+gWaveSamples = 0x800DC710; // size:0x20
+
+gBendPitchOneOctaveFrequencies = 0x800DC730; // size:0x400
+gBendPitchTwoSemitonesFrequencies = 0x800DCB30;
+gPitchFrequencies = 0x800DCF30;
+gDefaultShortNoteVelocityTable = 0x800DD130;
+gDefaultShortNoteGateTimeTable = 0x800DD140;
+gDefaultEnvelope = 0x800DD150;
+gZeroNoteSub = 0x800DD160;
+gDefaultNoteSub = 0x800DD170;
+gHaasEffectDelaySizes = 0x800DD180; // size:0x80 type:u16
+gD_800DD200 = 0x800DD200; // size:0x80 type:s16
+gHeadsetPanVolume = 0x800DD280; // size:0x200 type:f32
+gStereoPanVolume = 0x800DD480; // size:0x200 type:f32
+gDefaultPanVolume = 0x800DD680; // size:0x200 type:f32
+
+aAqSquidAnim = 0x06000AE4;
+aAqAnglerFishAnim = 0x06002628;
+aAqSpindlyFishAnim = 0x060260EC;
+D_AQ_60314AC = 0x060314AC;
+D_TI1_70067C4 = 0x70067C4;
+aTi1DesertCrawlerSkel = 0x7006990;
+D_TI1_7006F74 = 0x7006F74;
+D_TI1_7007130 = 0x7007130;
+D_TI1_7007234 = 0x7007234;
+D_TI1_700733C = 0x700733C;
+D_TI2_7003EE8 = 0x7003EE8;
+D_TI2_7003F00 = 0x7003F00;
+D_TI2_7004270 = 0x7004270;
+D_TI2_7004400 = 0x7004400;
+D_TI2_70045D0 = 0x70045D0;
+D_TI2_70049C0 = 0x70049C0;
+D_TI2_7004E80 = 0x7004E80;
+D_TI2_7005300 = 0x7005300;
+D_TI2_70084CC = 0x70084CC;
+D_TI2_70096EC = 0x70096EC;
+D_TI2_7009700 = 0x7009700;
+D_TI2_7009890 = 0x7009890;
+D_TI2_7009A80 = 0x7009A80;
+D_TI2_700E244 = 0x700E244;
+D_TI_8008FE8 = 0x8008FE8;
+D_TI_900FC4C = 0x900FC4C;
+D_TI_9004288 = 0x9004288;
+D_TI_A009990 = 0xA009990;
+
+D_A6_6018994 = 0x6018994;
+D_A6_6011910 = 0x6011910;
+D_A6_601B2B0 = 0x601B2B0;
+D_A6_6018BA0 = 0x6018BA0;
+D_A6_6028578 = 0x6028578;
+aA6GorgonHitbox = 0x6028454;
+
+D_TITLE_60246F8 = 0x60246F8;
+aFalcoAnim = 0x60338DC;
+aSlippyAnim = 0x6036278;
+aPeppyAnim = 0x603531C;

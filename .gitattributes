@@ -1,0 +1,10 @@
+# One line ending on every machine; the Python tools and the decomp's sources
+# are LF. Visual Studio's own files keep Windows endings.
+* text=auto eol=lf
+*.sln             text eol=crlf
+*.vcxproj         text eol=crlf
+*.vcxproj.filters text eol=crlf
+
+*.png binary
+*.ico binary
+*.bin binary

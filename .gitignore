@@ -1,0 +1,77 @@
+tools/aica/.encode_cache/
+tools/aica/__pycache__/
+lib/
+pyvenv.cfg
+*.elf
+*.tgz
+*.cdi
+*.iso
+sf64.us.rev1.yaml
+music/
+.vscode/
+.DS_Store
+asm
+expected
+__pycache__
+.splat/
+starfox64.ld
+starfox64.uncompressed.ld
+starfox64.*.*.yaml
+starfox64.us.modded.map
+ctx.c
+ctx.c.m2c
+*.d
+*_auto.ld
+*.n64
+*.z64
+*.v64
+*.u64
+*.bin
+*.otr
+*.eeprom
+assets/yaml/us/ast_test.yaml
+/audio_data
+src/assets/*
+srcjp/assets/*
+include/assets/*
+/build
+tools/mio0
+tools/ido-recomp
+debug/
+.venv/
+m2cfiles/
+TempComp.bin.mio0
+torch.hash.yml
+bin/
+initted.touch
+music/
+sf_data/
+*.cdi
+*.iso
+*.zip
+sf64.elf
+tools/aica/_ya2beam.so
+
+# Xbox port (RXDK): build outputs and ROM-derived files, all made by setup.py
+/data/
+/out/
+/Xbox/
+/Star-Fox-64-X/
+/Platform/xbox/gen/
+/baserom/
+/.vs/
+*.vcxproj.user
+/*.log
+/tools/mio0.exe
+
+# Torch, fetched by setup.py at the revision it pins (TORCH_REV), and built
+/tools/Torch/
+# ROM-derived: the sample table sf64_emit.py writes every build (offsets and
+# lengths read out of the ROM's audio bank)
+/src/audio/aica_sample_table.c
+/src/audio/aica_sample_table.h
+/baserom.us.rev1.uncompressed.z64
+/tools/aica/_ya2beam.so*
+# the game's radio messages: Torch's extraction plus the Dreamcast port's
+# button-name edits (tools/xbox/radio_messages.py), made every build
+/src/dc/ast_radio.c

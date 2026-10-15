@@ -1,0 +1,471 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Platform">
+      <UniqueIdentifier>{5601B0D1-8D3B-52E7-BDD1-429247D4A13D}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Platform\xbox">
+      <UniqueIdentifier>{96624FC5-05FF-55BA-AE8C-3F6FEF20376D}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Platform\xbox\aica">
+      <UniqueIdentifier>{95900D9C-BAD0-538E-A57E-F259BB7596EB}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Platform\xbox\gen">
+      <UniqueIdentifier>{C3365D3F-4A70-5F75-B3A3-7828F0EB68C6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{3D8823B2-7608-5DA6-90BA-1CF3C559D5C2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\audio">
+      <UniqueIdentifier>{C4F24D5C-A8F5-597B-850E-4BB1CEFBEF6E}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\dc">
+      <UniqueIdentifier>{59829639-3C1F-56A8-8E9F-37D2B9091793}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\engine">
+      <UniqueIdentifier>{F123D1C5-7C5E-5F9F-8F61-A1A250F7A077}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\gfx">
+      <UniqueIdentifier>{EC5484EF-9552-56A1-B2FA-F6D0D080AC7F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\libultra">
+      <UniqueIdentifier>{66BF1669-C793-501B-A3EF-1DF76A4AF213}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\libultra\gu">
+      <UniqueIdentifier>{7EE4FFD4-0F80-58D3-9CBC-807AB21463AD}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\overlays">
+      <UniqueIdentifier>{CE8C31EB-487D-5B13-9C9B-2EAA31700C39}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\overlays\ovl_ending">
+      <UniqueIdentifier>{D3068FF9-5FBC-57EC-850D-5F6741ACF500}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\overlays\ovl_i1">
+      <UniqueIdentifier>{7AA99E31-3478-5CF8-B19F-603086ED64D0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\overlays\ovl_i2">
+      <UniqueIdentifier>{C8BF74FC-6F3A-549D-8532-13AB1EC64E7B}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\overlays\ovl_i3">
+      <UniqueIdentifier>{E3A1F656-77AE-589E-B189-306557FBB456}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\overlays\ovl_i4">
+      <UniqueIdentifier>{44CBC5B6-05A1-51DE-86B8-FF1D7ED05651}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\overlays\ovl_i5">
+      <UniqueIdentifier>{DEE46750-2D80-5345-9ADE-83CFF6AE0A92}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\overlays\ovl_i6">
+      <UniqueIdentifier>{8D420A4D-3D3C-50BC-BE5E-08092289C17D}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\overlays\ovl_menu">
+      <UniqueIdentifier>{778AEA4C-4AC1-59B7-ADC7-021A299E9C10}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\overlays\ovl_unused">
+      <UniqueIdentifier>{9EE4FD87-283C-5747-8A70-DCE6E3F8E9A3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\sys">
+      <UniqueIdentifier>{B4BE6E93-6178-548A-A5BA-32EFEA91ED14}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Platform\xbox\aica\aica_bus_xbox.c">
+      <Filter>Platform\xbox\aica</Filter>
+    </ClCompile>
+    <ClCompile Include="Platform\xbox\aica\aica_fw_xbox.c">
+      <Filter>Platform\xbox\aica</Filter>
+    </ClCompile>
+    <ClCompile Include="Platform\xbox\aica\aica_mixer_xbox.c">
+      <Filter>Platform\xbox\aica</Filter>
+    </ClCompile>
+    <ClCompile Include="Platform\xbox\kos_extra_xbox.c">
+      <Filter>Platform\xbox</Filter>
+    </ClCompile>
+    <ClCompile Include="Platform\xbox\kos_fs_xbox.c">
+      <Filter>Platform\xbox</Filter>
+    </ClCompile>
+    <ClCompile Include="Platform\xbox\kos_log_xbox.c">
+      <Filter>Platform\xbox</Filter>
+    </ClCompile>
+    <ClCompile Include="Platform\xbox\kos_maple_xbox.c">
+      <Filter>Platform\xbox</Filter>
+    </ClCompile>
+    <ClCompile Include="Platform\xbox\kos_snd_stream_xbox.c">
+      <Filter>Platform\xbox</Filter>
+    </ClCompile>
+    <ClCompile Include="Platform\xbox\kos_sys_xbox.c">
+      <Filter>Platform\xbox</Filter>
+    </ClCompile>
+    <ClCompile Include="Platform\xbox\kos_thread_xbox.c">
+      <Filter>Platform\xbox</Filter>
+    </ClCompile>
+    <ClCompile Include="Platform\xbox\kos_vmu_pkg.c">
+      <Filter>Platform\xbox</Filter>
+    </ClCompile>
+    <ClCompile Include="Platform\xbox\kos_vmu_xbox.c">
+      <Filter>Platform\xbox</Filter>
+    </ClCompile>
+    <ClCompile Include="Platform\xbox\kos_wdt_xbox.c">
+      <Filter>Platform\xbox</Filter>
+    </ClCompile>
+    <ClCompile Include="Platform\xbox\pvr_xbox.c">
+      <Filter>Platform\xbox</Filter>
+    </ClCompile>
+    <ClCompile Include="Platform\xbox\sh4zam_x86.c">
+      <Filter>Platform\xbox</Filter>
+    </ClCompile>
+    <ClCompile Include="Platform\xbox\xbox_enhance.c">
+      <Filter>Platform\xbox</Filter>
+    </ClCompile>
+    <ClCompile Include="Platform\xbox\xbox_interp.c">
+      <Filter>Platform\xbox</Filter>
+    </ClCompile>
+    <ClCompile Include="Platform\xbox\xbox_main.c">
+      <Filter>Platform\xbox</Filter>
+    </ClCompile>
+    <ClCompile Include="Platform\xbox\xbox_menu.c">
+      <Filter>Platform\xbox</Filter>
+    </ClCompile>
+    <ClCompile Include="Platform\xbox\xbox_segments.c">
+      <Filter>Platform\xbox</Filter>
+    </ClCompile>
+    <ClCompile Include="Platform\xbox\xbox_settings.c">
+      <Filter>Platform\xbox</Filter>
+    </ClCompile>
+    <ClCompile Include="Platform\xbox\gen\asset_symbols.c">
+      <Filter>Platform\xbox\gen</Filter>
+    </ClCompile>
+    <ClCompile Include="src\audio\libwav.c">
+      <Filter>src\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="src\audio\sndwav.c">
+      <Filter>src\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="src\audio\mixer.c">
+      <Filter>src\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="src\audio\audio_synthesis.c">
+      <Filter>src\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="src\audio\audio_heap.c">
+      <Filter>src\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="src\audio\audio_load.c">
+      <Filter>src\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="src\audio\audio_playback.c">
+      <Filter>src\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="src\audio\audio_effects.c">
+      <Filter>src\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="src\audio\audio_seqplayer.c">
+      <Filter>src\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="src\audio\audio_general.c">
+      <Filter>src\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="src\audio\audio_thread.c">
+      <Filter>src\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="src\audio\wave_samples.c">
+      <Filter>src\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="src\audio\note_data.c">
+      <Filter>src\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gfx\gfx_buf.c">
+      <Filter>src\gfx</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gfx\gfx_dc.c">
+      <Filter>src\gfx</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gfx\gfx_retro_dc.c">
+      <Filter>src\gfx</Filter>
+    </ClCompile>
+    <ClCompile Include="src\sys\sys_joybus.c">
+      <Filter>src\sys</Filter>
+    </ClCompile>
+    <ClCompile Include="src\sys\sys_lib.c">
+      <Filter>src\sys</Filter>
+    </ClCompile>
+    <ClCompile Include="src\sys\sys_lights.c">
+      <Filter>src\sys</Filter>
+    </ClCompile>
+    <ClCompile Include="src\sys\sys_main.c">
+      <Filter>src\sys</Filter>
+    </ClCompile>
+    <ClCompile Include="src\sys\sys_math.c">
+      <Filter>src\sys</Filter>
+    </ClCompile>
+    <ClCompile Include="src\sys\sys_matrix.c">
+      <Filter>src\sys</Filter>
+    </ClCompile>
+    <ClCompile Include="src\sys\sys_memory.c">
+      <Filter>src\sys</Filter>
+    </ClCompile>
+    <ClCompile Include="src\sys\sys_timer.c">
+      <Filter>src\sys</Filter>
+    </ClCompile>
+    <ClCompile Include="src\sys\sys_save.c">
+      <Filter>src\sys</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libultra\gu\perspective.c">
+      <Filter>src\libultra\gu</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libultra\gu\lookat.c">
+      <Filter>src\libultra\gu</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libultra\gu\ortho.c">
+      <Filter>src\libultra\gu</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libultra\gu\mtxutil.c">
+      <Filter>src\libultra\gu</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_360.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_beam.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_bg.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_boss.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_tank.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_demo.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_display.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_load.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_edata.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_edisplay.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_enmy.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_enmy2.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_effect.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_fade.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_blur.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_hud.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_col1.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_std_lib.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_game.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_col2.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_pause.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_play.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_rcp.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_radio.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_reset.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_versus.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_message.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_save.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_context.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_shapes.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_wheels.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_msg_palette.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i1\fox_i1.c">
+      <Filter>src\overlays\ovl_i1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i1\fox_co.c">
+      <Filter>src\overlays\ovl_i1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i1\fox_ve1.c">
+      <Filter>src\overlays\ovl_i1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i1\fox_tr.c">
+      <Filter>src\overlays\ovl_i1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i1\fox_tr360.c">
+      <Filter>src\overlays\ovl_i1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i2\fox_i2.c">
+      <Filter>src\overlays\ovl_i2</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i2\fox_me.c">
+      <Filter>src\overlays\ovl_i2</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i2\fox_sx.c">
+      <Filter>src\overlays\ovl_i2</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i3\fox_i3.c">
+      <Filter>src\overlays\ovl_i3</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i3\fox_a6.c">
+      <Filter>src\overlays\ovl_i3</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i3\fox_zo.c">
+      <Filter>src\overlays\ovl_i3</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i3\fox_so.c">
+      <Filter>src\overlays\ovl_i3</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i3\fox_aq.c">
+      <Filter>src\overlays\ovl_i3</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i4\fox_i4.c">
+      <Filter>src\overlays\ovl_i4</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i4\fox_fo.c">
+      <Filter>src\overlays\ovl_i4</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i4\fox_bo.c">
+      <Filter>src\overlays\ovl_i4</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i4\fox_ka.c">
+      <Filter>src\overlays\ovl_i4</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i4\fox_sz.c">
+      <Filter>src\overlays\ovl_i4</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i5\fox_i5.c">
+      <Filter>src\overlays\ovl_i5</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i5\fox_ti_cs.c">
+      <Filter>src\overlays\ovl_i5</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i5\fox_ti.c">
+      <Filter>src\overlays\ovl_i5</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i5\fox_ma.c">
+      <Filter>src\overlays\ovl_i5</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i5\fox_ground.c">
+      <Filter>src\overlays\ovl_i5</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i6\fox_i6.c">
+      <Filter>src\overlays\ovl_i6</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i6\fox_andross.c">
+      <Filter>src\overlays\ovl_i6</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i6\fox_ve2.c">
+      <Filter>src\overlays\ovl_i6</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i6\fox_sy.c">
+      <Filter>src\overlays\ovl_i6</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_i6\fox_turret.c">
+      <Filter>src\overlays\ovl_i6</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_menu\fox_i_menu.c">
+      <Filter>src\overlays\ovl_menu</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_menu\fox_title.c">
+      <Filter>src\overlays\ovl_menu</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_menu\fox_option.c">
+      <Filter>src\overlays\ovl_menu</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_menu\fox_map.c">
+      <Filter>src\overlays\ovl_menu</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_ending\fox_end1.c">
+      <Filter>src\overlays\ovl_ending</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_ending\fox_end2.c">
+      <Filter>src\overlays\ovl_ending</Filter>
+    </ClCompile>
+    <ClCompile Include="src\overlays\ovl_unused\fox_unused.c">
+      <Filter>src\overlays\ovl_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="src\libc_math64.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dmatable.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\buffers.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dc\ast_radio.c">
+      <Filter>src\dc</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ultra_reimpl.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\fox_rcp_init.c">
+      <Filter>src\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\audio\audio_context.c">
+      <Filter>src\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="src\audio\audio_tables.c">
+      <Filter>src\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="src\audio\aica_synth.c">
+      <Filter>src\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="src\audio\aica_sample_table.c">
+      <Filter>src\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gfx\gfx_cc.c">
+      <Filter>src\gfx</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gfx\gfx_pvr.c">
+      <Filter>src\gfx</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <RxdkResource Include="Platform\xbox\titleimage.rdf">
+      <Filter>Platform\xbox</Filter>
+    </RxdkResource>
+    <RxdkResource Include="Platform\xbox\saveimage.rdf">
+      <Filter>Platform\xbox</Filter>
+    </RxdkResource>
+  </ItemGroup>
+</Project>

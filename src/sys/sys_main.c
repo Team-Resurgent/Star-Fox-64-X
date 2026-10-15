@@ -1,0 +1,575 @@
+#include "n64sys.h"
+#include "sf64audio_external.h"
+#if defined(TARGET_XBOX)
+#include "xbox_settings.h" // XBOX: the port's menu and cheats
+#endif
+// #include "mods.h"
+#include <stdio.h>
+#include <kos/thread.h>
+#include <kos/genwait.h>
+#include <dc/vblank.h>
+#include "gfx/gfx_pc.h"
+#include "gfx/gfx_dc.h"
+#include <stdlib.h>
+
+#if defined(IDE_SUPPORT) || defined(SDCARD_SUPPORT)
+#include <dc/g1ata.h>
+#include <dc/sd.h>
+#include <fat/fs_fat.h>
+
+static kos_blockdev_t dev;
+#endif
+
+#define SAMPLES_HIGH 560
+#define SAMPLES_LOW 528
+
+extern struct GfxWindowManagerAPI gfx_glx;
+extern struct GfxRenderingAPI gfx_pvr_api;
+static struct GfxWindowManagerAPI* wm_api = &gfx_dc;
+static struct GfxRenderingAPI* rendering_api = &gfx_pvr_api;
+
+extern void gfx_run(Gfx* commands);
+char* fnpre;
+#include <dc/sound/sound.h>
+volatile int inited = 0;
+void AudioThread_CreateNextAudioBuffer(s16* samplesL, s16* samplesR, u32 num_samples);
+
+void* AudioThread(UNUSED void* arg);
+
+/* static  */volatile uint64_t vblticker = 0;
+
+void vblfunc(uint32_t c, void* d) {
+    (void) c;
+    (void) d;
+    vblticker++;
+    genwait_wake_all((void*) &vblticker);
+}
+
+void _AudioInit(void) {
+    static int audio_started = 0;
+    if (audio_started) {
+        return;
+    }
+    audio_started = 1;
+    /* Bring up the base sound system (AICA ARM program + snd_mem/ARAM allocator +
+       SH4->AICA command queue) that the voice driver relies on. AICA mixes in
+       hardware, so this produces no output of its own. */
+    if (snd_init() != 0) {
+        printf("AICA INIT FAILURE!\n");
+        return;
+    }
+    /* keep the scheduler lively for the vblank-driven synthesis thread */
+    thd_set_hz(300);
+    printf("Sound init complete (AICA hardware mixing, no stream)!\n");
+}
+
+SPTask* gCurrentTask;
+SPTask* sAudioTasks[1];
+SPTask* sGfxTasks[2];
+#ifdef AVOID_UB
+SPTask* sNewAudioTasks[2];
+#else
+SPTask* sNewAudioTasks[1];
+#endif
+SPTask* sNewGfxTasks[2];
+
+#include <kos.h>
+
+extern u8* SEG_BUF[15];
+extern u32 SEG_PAGECOUNT[15];
+
+/* Macro for converting P1 address to physical memory address */
+#define P1_TO_PHYSICAL(addr) ((uintptr_t)(addr) & MEM_AREA_CACHE_MASK)
+
+#if defined(TARGET_XBOX)
+/* XBOX: no TLB to program; the segment buffers are committed at the
+ * segments' own addresses instead (Platform/xbox/xbox_segments.c). */
+void xbox_segments_init(void);
+
+void segment_init(void) {
+    xbox_segments_init();
+}
+#else
+void segment_init(void) {
+    printf("Using SH4 TLB mappings for segmented address translation.\n");
+
+    mmu_init_basic();
+
+    mmu_page_map_static(0, 0x0C000000, PAGE_SIZE_1M, MMU_ALL_RDWR, true);
+
+    for (uint32_t s = 1; s < 16; s++) {
+        for (uint32_t p = 0; p < SEG_PAGECOUNT[s - 1]; p++) {
+            mmu_page_map_static(
+                ((uintptr_t) (s << 24) + (65536 * p)),
+                P1_TO_PHYSICAL(SEG_BUF[(s - 1)]) + (65536 * p),
+                PAGE_SIZE_64K, MMU_ALL_RDWR, true);
+        }
+    }
+}
+#endif /* XBOX: !TARGET_XBOX */
+
+OSMesgQueue gPiMgrCmdQueue;
+OSMesg sPiMgrCmdBuff[50];
+
+OSMesgQueue gDmaMesgQueue;
+void* sDmaMsgBuff[1];
+OSIoMesg gDmaIOMsg;
+OSMesgQueue gSerialEventQueue;
+void* sSerialEventBuff[1];
+OSMesgQueue gMainThreadMesgQueue;
+void* sMainThreadMsgBuff[32];
+OSMesgQueue gTaskMesgQueue;
+void* sTaskMsgBuff[16];
+OSMesgQueue gAudioVImesgQueue;
+void* sAudioVImsgBuff[1];
+OSMesgQueue gAudioTaskMesgQueue;
+void* sAudioTaskMsgBuff[1];
+OSMesgQueue gGfxTaskMesgQueue;
+void* sGfxTaskMsgBuff[2];
+OSMesgQueue gSerialThreadMesgQueue;
+void* sSerialThreadMsgBuff[8];
+OSMesgQueue gControllerMesgQueue;
+void* sControllerMsgBuff[1];
+OSMesgQueue gSaveMesgQueue;
+void* sSaveMsgBuff[1];
+OSMesgQueue gTimerTaskMesgQueue;
+void* sTimerTaskMsgBuff[16];
+OSMesgQueue gTimerWaitMesgQueue;
+void* sTimerWaitMsgBuff[1];
+
+GfxPool gGfxPools[2];
+
+GfxPool* gGfxPool;
+SPTask* gGfxTask;
+Vp* gViewport;
+Mtx* gGfxMtx;
+Gfx* gUnkDisp1;
+Gfx* gMasterDisp;
+Gfx* gUnkDisp2;
+Lightsn* gLight;
+FrameBuffer* gFrameBuffer;
+
+u8 gVIsPerFrame;
+u32 gSysFrameCount;
+u8 gStartNMI;
+u8 gStopTasks;
+u8 gControllerRumbleFlags[4];
+u16 gFillScreenColor;
+u16 gFillScreen;
+
+u8 gUnusedStack[0x1000];
+OSThread sIdleThread;            // 80138E90
+u8 sIdleThreadStack[0x1000];     // 801390A0
+OSThread gMainThread;            // 8013A040
+u8 sMainThreadStack[0x1000];     // 8013A1F0
+OSThread gGraphicsThread;        // 800DEAA0
+u8 gGraphicsThreadStack[0x1000]; // 800DEC50
+OSThread gTimerThread;           // 800DFC50
+u8 gTimerThreadStack[0x1000];    // 800DFE00
+OSThread gSerialThread;          // 800E0E00
+u8 gSerialThreadStack[0x1000];   // 800E0FB0
+
+volatile int called = 0;
+
+extern void AudioLoad_LoadFiles(void);
+
+void Graphics_SetTask(void) {
+    gGfxTask->mesgQueue = &gGfxTaskMesgQueue;
+    gGfxTask->msg = (OSMesg) TASK_MESG_2;
+    gGfxTask->task.t.type = M_GFXTASK;
+    gGfxTask->task.t.flags = 0;
+    gGfxTask->task.t.ucode_boot = NULL;
+    gGfxTask->task.t.ucode_boot_size = 0;
+    gGfxTask->task.t.ucode = NULL;
+    gGfxTask->task.t.ucode_size = SP_UCODE_SIZE;
+    gGfxTask->task.t.ucode_data = NULL;
+    gGfxTask->task.t.ucode_data_size = SP_UCODE_DATA_SIZE;
+    gGfxTask->task.t.dram_stack = gDramStack;
+    gGfxTask->task.t.dram_stack_size = SP_DRAM_STACK_SIZE8;
+    gGfxTask->task.t.output_buff = (u64*) gTaskOutputBuffer;
+    gGfxTask->task.t.output_buff_size = (u64*) gAudioHeap;
+    gGfxTask->task.t.data_ptr = (u64*) gGfxPool->masterDL;
+    gGfxTask->task.t.data_size = (gMasterDisp - gGfxPool->masterDL) * sizeof(Gfx);
+    gGfxTask->task.t.yield_data_ptr = (u64*) &gOSYieldData;
+    gGfxTask->task.t.yield_data_size = OS_YIELD_DATA_SIZE;
+    called++;
+    if (called > 5) {
+        gfx_run(gGfxPool->masterDL);
+    }
+}
+
+void Graphics_InitializeTask(u32 frameCount) {
+    gGfxPool = &gGfxPools[frameCount % 2];
+
+    gGfxTask = &gGfxPool->task;
+    gViewport = gGfxPool->viewports;
+    gGfxMtx = gGfxPool->mtx;
+    gUnkDisp1 = gGfxPool->unkDL1;
+    gMasterDisp = gGfxPool->masterDL;
+    gUnkDisp2 = gGfxPool->unkDL2;
+    gLight = gGfxPool->lights;
+
+    gFrameBuffer = &gFrameBuffers[frameCount % 3];
+
+    gGfxMatrix = &sGfxMatrixStack[0];
+    gCalcMatrix = &sCalcMatrixStack[0];
+
+    D_80178710 = &D_80178580[0];
+}
+
+void Main_InitMesgQueues(void) {
+    osCreateMesgQueue(&gDmaMesgQueue, sDmaMsgBuff, ARRAY_COUNT(sDmaMsgBuff));
+    osCreateMesgQueue(&gTaskMesgQueue, sTaskMsgBuff, ARRAY_COUNT(sTaskMsgBuff));
+    osCreateMesgQueue(&gAudioVImesgQueue, sAudioVImsgBuff, ARRAY_COUNT(sAudioVImsgBuff));
+    osCreateMesgQueue(&gAudioTaskMesgQueue, sAudioTaskMsgBuff, ARRAY_COUNT(sAudioTaskMsgBuff));
+    osCreateMesgQueue(&gGfxTaskMesgQueue, sGfxTaskMsgBuff, ARRAY_COUNT(sGfxTaskMsgBuff));
+    osCreateMesgQueue(&gSerialEventQueue, sSerialEventBuff, ARRAY_COUNT(sSerialEventBuff));
+    osCreateMesgQueue(&gMainThreadMesgQueue, sMainThreadMsgBuff, ARRAY_COUNT(sMainThreadMsgBuff));
+    osCreateMesgQueue(&gTimerTaskMesgQueue, sTimerTaskMsgBuff, ARRAY_COUNT(sTimerTaskMsgBuff));
+    osCreateMesgQueue(&gTimerWaitMesgQueue, sTimerWaitMsgBuff, ARRAY_COUNT(sTimerWaitMsgBuff));
+    osCreateMesgQueue(&gSerialThreadMesgQueue, sSerialThreadMsgBuff, ARRAY_COUNT(sSerialThreadMsgBuff));
+    osCreateMesgQueue(&gControllerMesgQueue, sControllerMsgBuff, ARRAY_COUNT(sControllerMsgBuff));
+    osCreateMesgQueue(&gSaveMesgQueue, sSaveMsgBuff, ARRAY_COUNT(sSaveMsgBuff));
+}
+
+#include <dc/sound/sound.h>
+#include <dc/sound/stream.h>
+#include "sndwav.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <kos/thread.h>
+#include <kos.h>
+#include "james2.xbm"
+
+vmufb_t vmubuf;
+
+extern mutex_t io_lock;
+
+void Main_ThreadEntry(void* arg0) {
+    OSMesg osMesg;
+    u8 mesg;
+    void* sp24;
+    u8 i;
+    u8 visPerFrame;
+    u8 validVIsPerFrame;
+
+    segment_init();
+
+    mutex_init(&io_lock, MUTEX_TYPE_NORMAL);
+
+    maple_device_t* dev = NULL;
+    if ((dev = maple_enum_type(0, MAPLE_FUNC_LCD))) {
+        vmufb_paint_xbm(&vmubuf, 0, 0, 48, 32, james_bits);
+        // only draw to first vmu
+        vmufb_present(&vmubuf, dev);
+    }
+
+    printf("loading audio files\n");
+    AudioLoad_LoadFiles();
+    printf("\tdone.\n");
+
+    wav_init();
+
+    gVIsPerFrame = 0;
+    gSysFrameCount = 0;
+    gStartNMI = false;
+    gStopTasks = false;
+    gFillScreenColor = 0;
+    gFillScreen = false;
+    gCurrentTask = NULL;
+
+    for (i = 0; i < ARRAY_COUNT(sAudioTasks); i += 1) {
+        sAudioTasks[i] = NULL;
+    }
+    for (i = 0; i < ARRAY_COUNT(sGfxTasks); i += 1) {
+        sGfxTasks[i] = NULL;
+    }
+    for (i = 0; i < ARRAY_COUNT(sNewAudioTasks); i += 1) {
+        sNewAudioTasks[i] = NULL;
+    }
+    for (i = 0; i < ARRAY_COUNT(sNewGfxTasks); i += 1) {
+        sNewGfxTasks[i] = NULL;
+    }
+
+    Lib_FillScreen(1);
+
+    kthread_attr_t main_attr5;
+    main_attr5.create_detached = 1;
+    main_attr5.stack_size = 32768;
+    main_attr5.stack_ptr = NULL;
+    // KOS: lower number = higher priority; the main render thread is PRIO_DEFAULT (10). The audio
+    // thread ticks the sequencer/synth and MUST run on time each vblank or note-offs land late
+    // (hanging notes) and next note-ons slip (delayed) — worst under heavy render (starfield). It was
+    // 11 (BELOW the renderer), so it only ran when the CPU-bound render loop yielded. Put it ABOVE
+    // the renderer: its per-vblank work is cheap and it blocks between ticks, so it preempts, does
+    // its ~sub-ms tick, and yields right back — the renderer just loses a small slice.
+    main_attr5.prio = 9;
+    main_attr5.label = "SPINNING";
+    thd_create_ex(&main_attr5, &AudioThread, arg0);
+
+    Controller_Init();
+    Main_InitMesgQueues();
+
+    gfx_init(wm_api, rendering_api, "Star Fox 64", false);
+
+    _AudioInit();
+    AudioLoad_Init();
+    { extern void AicaSynth_Init(void); AicaSynth_Init(); }
+    Audio_InitSounds();
+    vblank_handler_add(&vblfunc, NULL);
+    Game_Initialize();
+
+    osSendMesg(&gSerialThreadMesgQueue, (OSMesg) SI_READ_CONTROLLER, OS_MESG_NOBLOCK);
+    Graphics_InitializeTask(gSysFrameCount);
+    {
+        gSPDisplayList(gMasterDisp++, gGfxPool->unkDL1);
+        Game_Update();
+        gSPEndDisplayList(gUnkDisp1++);
+        gSPEndDisplayList(gUnkDisp2++);
+        gSPDisplayList(gMasterDisp++, gGfxPool->unkDL2);
+        gSPEndDisplayList(gMasterDisp++);
+    }
+    Graphics_SetTask();
+
+    while (true) {
+#if defined(TARGET_XBOX)
+        XboxPerf_FrameStart(); // XBOX: the frame-time readout
+#endif
+        if (MQ_GET_MESG(&gTimerTaskMesgQueue, &sp24)) {
+            Timer_CompleteTask(sp24);
+        }
+
+        gfx_start_frame();
+        gSysFrameCount++;
+        Graphics_InitializeTask(gSysFrameCount);
+#if defined(TARGET_XBOX)
+        XboxInterp_FrameBegin(); // XBOX: 60 fps -- record this frame's matrices
+#endif
+        Controller_UpdateInput();
+        gSPSegment(gUnkDisp1++, 0, 0);
+        gSPDisplayList(gMasterDisp++, gGfxPool->unkDL1);
+        Game_Update();
+
+        gSPEndDisplayList(gUnkDisp1++);
+        gSPEndDisplayList(gUnkDisp2++);
+        gSPDisplayList(gMasterDisp++, gGfxPool->unkDL2);
+#if defined(TARGET_XBOX)
+        /* XBOX: the per-frame cheats, then the port's menu over the whole
+           picture (Platform/xbox/xbox_menu.c) */
+        XboxPerf_LogicDone();
+        XboxCheats_DisplayPost();
+        XboxMenu_Update();
+#endif
+        gDPFullSync(gMasterDisp++);
+        gSPEndDisplayList(gMasterDisp++);
+#if defined(TARGET_XBOX)
+        /* XBOX: 60 fps (Platform/xbox/xbox_interp.c). The frame is drawn once,
+           or -- with the option, while it fits -- once per vertical blank it
+           lasts: blended with the last frame, the last time as built. Each
+           draw but the last waits one blank, the last the rest, so the game
+           keeps its own pace. */
+        XboxInterp_FrameEnd();
+        {
+            s32 n = XboxInterp_Draws(XboxPerf_LastBusyUs(), XboxPerf_LastDraws());
+            s32 k;
+
+            for (k = 1; k <= n; k++) {
+                XboxInterp_SetStep(k, n);
+                gXboxDrawVIs = (n == 1) ? 0 : ((k < n) ? 1 : (gVIsPerFrame - (n - 1)));
+                XboxPerf_DrawBegin();
+                Graphics_SetTask();
+                gfx_end_frame();
+            }
+            gXboxDrawVIs = 0;
+        }
+#else
+        Graphics_SetTask();
+        gfx_end_frame();
+#endif
+        Audio_Update();
+        Controller_Rumble();
+        thd_pass();
+    }
+}
+
+#if defined(SDCARD_SUPPORT)
+void sdcard_init(void) {
+    uint8_t partition_type;
+
+    if (sd_init())
+        return;
+
+    if (sd_blockdev_for_partition(0, &dev, &partition_type))
+        return;
+
+    if (fs_fat_mount("/sd", &dev, FS_FAT_MOUNT_READWRITE))
+        return;
+
+    printf("mounted sd card at /sd\n");
+}
+#endif
+
+#if defined(IDE_SUPPORT)
+void ide_init(void) {
+    uint8_t partition_type;
+
+    if (g1_ata_init())
+        return;
+
+    if (g1_ata_blockdev_for_partition(0, 1, &dev, &partition_type))
+        return;
+
+    if (fs_fat_mount("/ide", &dev, FS_FAT_MOUNT_READWRITE))
+        return;
+
+    printf("mounted ide partition at /ide\n");
+}
+#endif
+
+#if defined(TARGET_XBOX)
+/* XBOX: RXDK's startup calls `void __cdecl main(void)`
+ * (Platform/xbox/xbox_main.c), which runs this as sf64_main. */
+#define main sf64_main
+#endif
+int main(int argc, char **argv) {
+    printf("Searching for assets...\n");
+
+    FILE* fntest;
+
+#if defined(TARGET_XBOX)
+    /* XBOX: the data is beside the XBE, in D:\data (D: is the XBE's own
+     * folder, on disc and on a hard-disk copy alike) -- where the
+     * Dreamcast's /pc or /cd prefix put it. */
+    printf("D:/data: ");
+    fntest = fopen("D:/data/sf_data/logo.bin", "rb");
+    if (fntest) {
+        printf("found. Using D:/data for assets.\n");
+        fnpre = "D:/data";
+        goto assetsfound;
+    }
+    printf("not found.\n");
+#endif
+
+    printf("/pc: ");
+    fntest = fopen("/pc/sf_data/logo.bin", "rb");
+    if (fntest) {
+        printf("found. Using /pc for assets.\n");
+        fnpre = "/pc";
+        goto assetsfound;
+    }
+    printf("not found.\n");
+
+    printf("/cd: ");
+    fntest = fopen("/cd/sf_data/logo.bin", "rb");
+    if (fntest) {
+        printf("found. Using /cd for assets.\n");
+        fnpre = "/cd";
+        goto assetsfound;
+    }
+    printf("not found.\n");
+
+#if defined(IDE_SUPPORT) || defined(SDCARD_SUPPORT)
+    fs_fat_init();
+#endif
+
+#if defined(SDCARD_SUPPORT)
+    printf("/sd/sf64-dc: ");
+    sdcard_init();
+
+    fntest = fopen("/sd/sf64-dc/sf_data/logo.bin", "rb");
+    if (fntest) {
+        printf("found. Using /sd/sf64-dc for assets.\n");
+        fnpre = "/sd/sf64-dc";
+        goto assetsfound;
+    }
+    printf("not found.\n");
+#endif
+
+#if defined(IDE_SUPPORT)
+    printf("/ide/sf64-dc: ");
+    ide_init();
+
+    fntest = fopen("/ide/sf64-dc/sf_data/logo.bin", "rb");
+    if (fntest) {
+        printf("found. Using /ide/sf64-dc for assets.\n");
+        fnpre = "/ide/sf64-dc";
+        goto assetsfound;
+    }
+    printf("not found.\n");
+#endif
+
+    printf("Couldn't find assets, quitting...\n");
+    exit(-1);
+
+assetsfound:
+    fclose(fntest);
+
+    Main_ThreadEntry(NULL);
+
+#if defined(IDE_SUPPORT)
+    fs_fat_unmount("/ide");
+    g1_ata_shutdown();
+#endif
+
+#if defined(SDCARD_SUPPORT)
+    fs_fat_unmount("/sd");
+    sd_shutdown();
+#endif
+
+#if defined(IDE_SUPPORT) || defined(SDCARD_SUPPORT)
+    fs_fat_shutdown();
+#endif
+
+    return 0;
+}
+
+#if MODS_ISVIEWER == 1
+#include "../mods/isviewer.c"
+#endif
+
+void* AudioThread(UNUSED void* arg) {
+    uint64_t last_vbltick = vblticker;
+    uint32_t audio_frame = 0;
+
+    /* Bounded catch-up. The sequencer clock is slaved to vblank service while the
+       AICA mixes continuously in real time; a render hitch that makes us miss one
+       or more vblanks must still issue the sequence ticks that were due during
+       them, or the sequencer permanently slips behind the AICA -> hung/late notes
+       and dropped note-offs. We process up to CATCHUP_MAX buffers per wake and
+       advance last_vbltick by exactly what we run (never a snap-drop), so transient
+       1-2 vblank hitches are fully made up. If we fall further behind than the cap
+       (sustained overload / a long stall such as a scene load) we resync to real
+       time by dropping the excess instead of drifting unboundedly late. The cap
+       also keeps a catch-up burst from overflowing the SH4->AICA command queue the
+       way the earlier *unbounded* catch-up did (dead songs / no voice lines). */
+    enum { CATCHUP_MAX = 3 };
+
+    while (1) {
+        while (vblticker <= last_vbltick)
+            genwait_wait((void*) &vblticker, NULL, 0, NULL);
+
+        uint64_t behind = vblticker - last_vbltick;
+        if (behind > CATCHUP_MAX) {
+            /* Too far behind (sustained overload / a long stall such as a scene
+               load): resync to real time by dropping the excess rather than drifting
+               unboundedly late. The cap also bounds the catch-up burst so it can't
+               overflow the SH4->AICA command queue. */
+            last_vbltick = vblticker - CATCHUP_MAX;
+            behind = CATCHUP_MAX;
+        }
+        last_vbltick += behind;
+
+        for (uint64_t n = 0; n < behind; n++) {
+            /* HIGH every 4th generated buffer, keyed off the audio-frame counter
+               (not gSysFrameCount) so the sample-count cadence tracks buffers we
+               actually produce and stays correct through catch-up. */
+            int samplecount = ((audio_frame++ & 3) == 0) ? SAMPLES_HIGH : SAMPLES_LOW;
+            /* AICA mixes in hardware: AudioSynth_Update ticks the synth/voices and (on
+               __DREAMCAST__) discards the sample buffers, so pass NULL — there is no
+               software-mixed output buffer. */
+            AudioThread_CreateNextAudioBuffer(NULL, NULL, samplecount);
+        }
+    }
+
+    return NULL;
+}

@@ -1,0 +1,178 @@
+#include "gfx_window_manager_api.h"
+#include "gfx_screen_config.h"
+#include "macros.h"
+#include <kos.h>
+#include <stdio.h>
+#if defined(TARGET_XBOX)
+#include "xbox_settings.h" // XBOX: the frame-time readout
+#endif
+#include <string.h>
+#include <dc/video.h>
+#include <assert.h>
+
+#define GFX_API_NAME "Dreamcast PVR"
+
+#if LOWRES
+#define SCR_WIDTH (320)
+#define SCR_HEIGHT (240)
+#else
+#define SCR_WIDTH (640)
+#define SCR_HEIGHT (480)
+#endif
+
+static int force_vis = 1;
+static unsigned int last_time = 0;
+
+extern uint64_t timer_ms_gettime64(void);
+
+unsigned int GetSystemTimeLow(void) {
+    uint64_t msec = timer_ms_gettime64();
+    return (unsigned int) msec;
+}
+
+void DelayThread(unsigned int ms) {
+    thd_sleep(ms);
+}
+
+static void gfx_dc_init(UNUSED const char *game_name, UNUSED uint8_t start_in_fullscreen) {
+    last_time = GetSystemTimeLow();
+}
+
+static void gfx_dc_set_fullscreen_changed_callback(UNUSED void (*on_fullscreen_changed)(uint8_t is_now_fullscreen)) {
+    ;
+}
+
+static void gfx_dc_set_fullscreen(UNUSED uint8_t enable) {
+    ;
+}
+
+static void gfx_dc_set_keyboard_callbacks(UNUSED uint8_t (*on_key_down)(int scancode),
+                                          UNUSED uint8_t (*on_key_up)(int scancode),
+                                          UNUSED void (*on_all_keys_up)(void)) {
+}
+
+static void gfx_dc_main_loop(void (*run_one_game_iter)(void)) {
+    ;
+}
+
+static void gfx_dc_get_dimensions(uint32_t *width, uint32_t *height) {
+    *width = SCR_WIDTH;
+    *height = SCR_HEIGHT;
+}
+
+/* What events should we be handling? */
+static void gfx_dc_handle_events(void) {
+    ;
+}
+
+uint8_t skip_debounce = 0;
+
+extern uint8_t gVIsPerFrame;
+typedef enum LevelId {
+    /* -1 */ LEVEL_UNK_M1 = -1,
+    /*  0 */ LEVEL_CORNERIA,
+    /*  1 */ LEVEL_METEO,
+    /*  2 */ LEVEL_SECTOR_X,
+    /*  3 */ LEVEL_AREA_6,
+    /*  4 */ LEVEL_UNK_4,
+    /*  5 */ LEVEL_SECTOR_Y,
+    /*  6 */ LEVEL_VENOM_1,
+    /*  7 */ LEVEL_SOLAR,
+    /*  8 */ LEVEL_ZONESS,
+    /*  9 */ LEVEL_VENOM_ANDROSS,
+    /* 10 */ LEVEL_TRAINING,
+    /* 11 */ LEVEL_MACBETH,
+    /* 12 */ LEVEL_TITANIA,
+    /* 13 */ LEVEL_AQUAS,
+    /* 14 */ LEVEL_FORTUNA,
+    /* 15 */ LEVEL_UNK_15,
+    /* 16 */ LEVEL_KATINA,
+    /* 17 */ LEVEL_BOLSE,
+    /* 18 */ LEVEL_SECTOR_Z,
+    /* 19 */ LEVEL_VENOM_2,
+    /* 20 */ LEVEL_VERSUS,
+    /* 77 */ LEVEL_WARP_ZONE = 77,
+} LevelId;
+extern LevelId gCurrentLevel;
+
+uint32_t __attribute__((aligned(32))) frametimes[6] = {0, 17, 33, 50, 67, 84};
+
+static uint8_t gfx_dc_start_frame(void) {
+    // keep this disabled unless you like jitter
+#if 0
+    const unsigned int cur_time = GetSystemTimeLow();
+    const unsigned int elapsed = cur_time - last_time;
+    if (skip_debounce) {
+        skip_debounce--;
+        return 1;
+    }
+    uint32_t ActualFrameTime = frametimes[gVIsPerFrame];
+
+    // skip if frame took longer than (gVIsPerFrame * 16.666667) ms
+    if (elapsed > ActualFrameTime) {
+        // skip_debounce = 3; // skip a max of once every 4 (1+3) frames
+        skip_debounce = 1; // skip every other
+        last_time = cur_time;
+        return 0;
+    }
+#endif
+    return 1;
+}
+
+static void gfx_dc_swap_buffers_begin(void) {
+    ;
+}
+extern volatile uint64_t vblticker;
+uint64_t last_ticker = 0;
+static void gfx_dc_swap_buffers_end(void) {
+  //  const unsigned int cur_time = GetSystemTimeLow();
+   // const unsigned int elapsed = cur_time - last_time;
+
+    // swap before doing any kind of delay or passing of thread
+    // (raw-PVR flips in gfx_pvr_finish_render via pvr_scene_finish, not here)
+
+//    last_time = cur_time;
+
+    // Number of microseconds a frame should take (anywhere between 2 and 5 VIs per frame)
+//    uint32_t ActualFrameTime = frametimes[gVIsPerFrame];
+
+#if defined(TARGET_XBOX)
+    XboxPerf_WorkDone(); // XBOX: the frame's work ends here, the wait begins
+#endif
+#if defined(TARGET_XBOX)
+    // XBOX: 60 fps -- a logic frame drawn more than once waits one blank a draw (sys_main.c)
+    while (vblticker < (last_ticker + ((gXboxDrawVIs > 0) ? (uint64_t) gXboxDrawVIs : gVIsPerFrame)))
+        genwait_wait((void*)&vblticker, NULL, 0, NULL);
+#else
+    while (vblticker < (last_ticker + gVIsPerFrame))
+        genwait_wait((void*)&vblticker, NULL, 0, NULL);
+#endif
+    last_ticker = vblticker;
+
+
+  //  if (force_vis && (elapsed < ActualFrameTime)) {
+//#ifdef DEBUG
+  //      printf("elapsed %d ms fps %f delay %d \n", elapsed, 1000.0f / elapsed, ActualFrameTime - elapsed);
+//#endif
+  //      DelayThread(ActualFrameTime - elapsed);
+    //    last_time += (ActualFrameTime - elapsed);
+    //}
+}
+
+/* Idk what this is for? */
+static double gfx_dc_get_time(void) {
+    return 0.0;
+}
+
+struct GfxWindowManagerAPI gfx_dc = { gfx_dc_init,
+                                      gfx_dc_set_keyboard_callbacks,
+                                      gfx_dc_set_fullscreen_changed_callback,
+                                      gfx_dc_set_fullscreen,
+                                      gfx_dc_main_loop,
+                                      gfx_dc_get_dimensions,
+                                      gfx_dc_handle_events,
+                                      gfx_dc_start_frame,
+                                      gfx_dc_swap_buffers_begin,
+                                      gfx_dc_swap_buffers_end,
+                                      gfx_dc_get_time };
+
