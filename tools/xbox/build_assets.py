@@ -115,7 +115,7 @@ def compile_one(name):
     if os.path.exists(obj):
         os.remove(obj)
     r = subprocess.run(xbconfig.compile_command(src, obj, xbconfig.ASSET_FLAGS),
-                       cwd=ROOT, capture_output=True, text=True)
+                       cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
     if r.returncode != 0:
         return name, r.stderr[-4000:]
     return name, None

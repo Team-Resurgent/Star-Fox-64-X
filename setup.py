@@ -37,11 +37,15 @@ Torch).
   6. the build: Rxdk.Cli compiles, links, bundles the icons and packs the ISO
 """
 import argparse
+import glob
 import hashlib
+import json
 import os
 import shutil
+import stat
 import subprocess
 import sys
+import tempfile
 import time
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -115,37 +119,86 @@ def rom_ok():
     return True, ""
 
 
-def find_vs():
+def find_vs_install():
     """The newest Visual Studio (2022 or later) with the x64 C++ tools, by
-    vswhere, which every Visual Studio installer puts in the same place."""
+    vswhere, which every Visual Studio installer puts in the same place:
+    (its folder, its major version -- 17 for 2022, 18 for 2026), or None."""
     vswhere = os.path.join(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)"),
                            "Microsoft Visual Studio", "Installer", "vswhere.exe")
     if not os.path.isfile(vswhere):
         return None
     r = subprocess.run([vswhere, "-latest", "-products", "*", "-version", "[17.0,",
                         "-requires", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
-                        "-property", "installationPath"], capture_output=True, text=True)
-    path = r.stdout.strip().splitlines()
-    return path[0] if (r.returncode == 0 and path and os.path.isdir(path[0])) else None
+                        "-format", "json", "-utf8"],
+                       capture_output=True, text=True, encoding="utf-8", errors="replace")
+    # -utf8: vswhere's JSON carries the install's display names in the
+    # system's language, which the console code page cannot always decode
+    try:
+        found = json.loads(r.stdout) if (r.returncode == 0 and r.stdout) else []
+    except ValueError:
+        found = []
+    if not found:
+        return None
+    path = found[0].get("installationPath", "")
+    try:
+        major = int(found[0].get("installationVersion", "0").split(".")[0])
+    except ValueError:
+        major = 0
+    return (path, major) if os.path.isdir(path) else None
 
 
-def find_cmake():
-    c = shutil.which("cmake")
-    if c:
-        return c
+def find_vs():
+    vs = find_vs_install()
+    return vs[0] if vs else None
+
+
+def vs_generator(cmake, major):
+    """The Visual Studio generator of `major` this CMake has, as `cmake --help`
+    names it ("Visual Studio 17 2022"), or None when it is too old to know
+    that Visual Studio."""
+    r = subprocess.run([cmake, "--help"], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    for line in r.stdout.splitlines():
+        name = line.split("=")[0].strip().lstrip("*").strip()
+        if name.endswith("[arch]"):
+            name = name[:-len("[arch]")].strip()
+        if name.startswith("Visual Studio %d " % major):
+            return name
+    return None
+
+
+def cmake_candidates():
+    """Visual Studio's own CMake first (it always knows the Visual Studio it
+    came with), then one on the PATH."""
+    out = []
     vs = find_vs()
     if vs:
         p = os.path.join(vs, "Common7", "IDE", "CommonExtensions", "Microsoft", "CMake", "CMake",
                          "bin", "cmake.exe")
         if os.path.isfile(p):
-            return p
-    return None
+            out.append(p)
+    c = shutil.which("cmake")
+    if c and all(os.path.normcase(c) != os.path.normcase(o) for o in out):
+        out.append(c)
+    return out
+
+
+def find_cmake():
+    """(cmake, generator) able to build with the Visual Studio found, or
+    (a cmake, None) when none is, or (None, None) with no CMake at all."""
+    cands = cmake_candidates()
+    vs = find_vs_install()
+    if vs:
+        for c in cands:
+            gen = vs_generator(c, vs[1])
+            if gen:
+                return c, gen
+    return (cands[0] if cands else None), None
 
 
 def torch_rev():
     if not os.path.isdir(os.path.join(TORCH_SRC, ".git")) and not os.path.isfile(os.path.join(TORCH_SRC, ".git")):
         return None
-    r = subprocess.run(["git", "-C", TORCH_SRC, "rev-parse", "HEAD"], capture_output=True, text=True)
+    r = subprocess.run(["git", "-C", TORCH_SRC, "rev-parse", "HEAD"], capture_output=True, text=True, encoding="utf-8", errors="replace")
     return r.stdout.strip() if r.returncode == 0 else None
 
 
@@ -154,10 +207,19 @@ def check():
     good, why = rom_ok()
     say("ROM: %s" % ("US v1.1, ok" if good else why))
     ok &= good
-    for name, path in (("RXDK CLI", xbconfig.rxdk_cli()), ("RXDK clang", xbconfig.clang())):
-        there = os.path.isfile(path)
-        say("%s: %s" % (name, path if there else "missing (RXDK > RXDK Window > Install Prerequisites)"))
-        ok &= there
+    cli = xbconfig.rxdk_cli()
+    there = os.path.isfile(cli)
+    say("RXDK CLI: %s" % (cli if there else "missing (RXDK > RXDK Window > Install Prerequisites)"))
+    ok &= there
+    probed = xbconfig.rxdk_compile_prefix()
+    cc = xbconfig.c_compiler()
+    if probed:
+        say("Xbox C compiler (asset segments): %s, with the RXDK's own flags" % probed[0])
+    else:
+        say("Xbox C compiler (asset segments): %s" % (cc[0] + " (RXDK 1.2 flags; the RXDK did not "
+            "report its own)" if cc else "missing: the RXDK's clang was not found under %s (set "
+            "RXDK_CLANG to its clang.exe)" % xbconfig.rxdk_root()))
+    ok &= bool(probed or cc)
     py = sys.version_info >= (3, 8)
     say("Python: %d.%d%s" % (sys.version_info[0], sys.version_info[1], "" if py else " (3.8 or later needed)"))
     ok &= py
@@ -167,9 +229,15 @@ def check():
     vs = find_vs()
     say("Visual Studio C++ tools: %s" % (vs or "missing (Visual Studio 2022 or later, Desktop development with C++)"))
     ok &= vs is not None
-    cm = find_cmake()
-    say("CMake: %s" % (cm or "missing (install CMake, or Visual Studio's C++ CMake tools)"))
-    ok &= cm is not None
+    cm, gen = find_cmake()
+    if cm is None:
+        say("CMake: missing (install CMake, or Visual Studio's C++ CMake tools for Windows)")
+    elif gen is None:
+        say("CMake: %s does not know this Visual Studio (install a newer CMake, or Visual "
+            "Studio's C++ CMake tools for Windows)" % cm)
+    else:
+        say("CMake: %s (%s)" % (cm, gen))
+    ok &= gen is not None
     rev = torch_rev()
     say("Torch source: %s" % ("at %s" % rev[:12] if rev == TORCH_REV else
                               ("at %s, will be moved to %s" % (rev[:12], TORCH_REV[:12]) if rev else
@@ -207,19 +275,57 @@ def fetch_torch():
     run(["git", "-C", TORCH_SRC, "submodule", "update", "--init", "--recursive"])
 
 
+def torch_cache_matches(gen, vs):
+    """Whether build/torch was configured for this generator and Visual
+    Studio. A cache from another one -- or from a configure that failed
+    before it chose its compilers -- cannot be reused, only replaced."""
+    cache = os.path.join(TORCH_BUILD, "CMakeCache.txt")
+    if not os.path.isfile(cache):
+        return True
+    vals = {}
+    with open(cache, encoding="utf-8", errors="replace") as f:
+        for line in f:
+            if "=" in line and ":" in line.split("=", 1)[0]:
+                key = line.split(":", 1)[0]
+                vals[key] = line.split("=", 1)[1].strip()
+    inst = vals.get("CMAKE_GENERATOR_INSTANCE", "")
+    # a configure that got as far as its compilers leaves this behind
+    compilers = glob.glob(os.path.join(TORCH_BUILD, "CMakeFiles", "*", "CMakeCXXCompiler.cmake"))
+    return (vals.get("CMAKE_GENERATOR") == gen and
+            os.path.normcase(os.path.normpath(inst)) == os.path.normcase(os.path.normpath(vs)) and
+            bool(compilers))
+
+
+def remove_tree(path):
+    """shutil.rmtree, through the read-only files git leaves in its object
+    store (Windows refuses to delete those as they are)."""
+    def retry(func, p, _exc):
+        os.chmod(p, stat.S_IWRITE)
+        func(p)
+    shutil.rmtree(path, onerror=retry)
+
+
 def step_torch(jobs):
-    cmake = find_cmake()
-    if cmake is None:
-        die("CMake not found (install CMake, or Visual Studio's C++ CMake tools)")
-    vs = find_vs()
+    vs = find_vs_install()
     if vs is None:
         die("Visual Studio 2022 or later with the C++ tools not found (Desktop development with C++)")
+    cmake, gen = find_cmake()
+    if cmake is None:
+        die("CMake not found (install CMake, or Visual Studio's C++ CMake tools for Windows)")
+    if gen is None:
+        die("%s is too old for Visual Studio %d: install a newer CMake from cmake.org, or add "
+            "'C++ CMake tools for Windows' in the Visual Studio Installer" % (cmake, vs[1]))
     fetch_torch()
-    if not os.path.isfile(os.path.join(TORCH_BUILD, "CMakeCache.txt")):
-        say("configuring Torch (its libraries are downloaded the first time)")
-        # CMake picks its newest Visual Studio generator; the instance is the one found
-        run([cmake, "-S", TORCH_SRC, "-B", TORCH_BUILD, "-A", "x64",
-             "-DCMAKE_GENERATOR_INSTANCE=" + vs])
+    if not torch_cache_matches(gen, vs[0]):
+        say("build/torch was configured for another setup: starting it again")
+        remove_tree(TORCH_BUILD)
+    say("configuring Torch with %s (its libraries are downloaded the first time)" % gen)
+    # CMAKE_POLICY_VERSION_MINIMUM: CMake 4 (Visual Studio 2026's) refuses
+    # a project that says it works with CMake older than 3.5, and the
+    # yaml-cpp Torch fetches says so; this is CMake's own way to build it
+    # anyway. Older CMakes do not use the setting.
+    run([cmake, "-S", TORCH_SRC, "-B", TORCH_BUILD, "-G", gen, "-A", "x64",
+         "-DCMAKE_GENERATOR_INSTANCE=" + vs[0], "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"])
     say("building Torch (incremental)")
     run([cmake, "--build", TORCH_BUILD, "--config", "Release", "--parallel", str(jobs)])
 
@@ -241,30 +347,71 @@ def step_assets():
     tool("radio_messages.py")
 
 
+def _ya2beam_clang(tmpdir):
+    """RXDK's host clang, as a 64-bit mingw DLL, where this RXDK has one."""
+    clang = xbconfig.clang()
+    if not os.path.isfile(clang):
+        return None, "no RXDK host clang"
+    llvm = xbconfig.llvm_root()
+    sysroot = os.path.join(llvm, "host-sysroot")
+    resdirs = sorted(glob.glob(os.path.join(sysroot, "lib", "clang", "*")))
+    if not os.path.isdir(sysroot) or not resdirs:
+        return None, "no RXDK host sysroot"
+    out = os.path.join(tmpdir, "ya2beam.dll")
+    cmd = [clang, "--target=x86_64-w64-mingw32", "--sysroot=" + sysroot,
+           "-resource-dir", resdirs[-1], "-fuse-ld=lld", "-rtlib=compiler-rt",
+           "-unwindlib=libunwind", "-O3", "-shared", "-o", out, YA2BEAM_SRC]
+    r = subprocess.run(cmd, cwd=tmpdir, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if r.returncode != 0 or not os.path.isfile(out):
+        return None, (r.stderr.strip().splitlines() or ["clang failed"])[-1]
+    return out, None
+
+
+def _ya2beam_msvc(tmpdir):
+    """Visual Studio's C compiler (the one Torch is built with), x64, through
+    its vcvars64.bat environment."""
+    vs = find_vs()
+    if vs is None:
+        return None, "no Visual Studio"
+    vcvars = os.path.join(vs, "VC", "Auxiliary", "Build", "vcvars64.bat")
+    if not os.path.isfile(vcvars):
+        return None, "no vcvars64.bat"
+    out = os.path.join(tmpdir, "ya2beam.dll")
+    # the object file lands in tmpdir, the working directory
+    line = ('call "%s" >nul && cl /nologo /O2 /LD "%s" /Fe"%s" /link /EXPORT:ya2beam_encode'
+            % (vcvars, YA2BEAM_SRC, out))
+    r = subprocess.run('cmd /d /s /c "' + line + '"', cwd=tmpdir, capture_output=True, text=True,
+                       encoding="utf-8", errors="replace")
+    if r.returncode != 0 or not os.path.isfile(out):
+        return None, ((r.stdout + r.stderr).strip().splitlines() or ["cl failed"])[-1]
+    return out, None
+
+
 def build_ya2beam():
     """tools/aica/ya2beam_c.py loads _ya2beam.so through ctypes, building it
     with `cc` when it is older than ya2beam.c; Windows has no `cc`, so it is
-    built here with RXDK's host clang as a 64-bit DLL for this Python. If it
-    fails, sf64_emit falls back to its pure-Python encoder (byte-identical,
-    slower)."""
-    llvm = xbconfig.llvm_root()
-    sysroot = os.path.join(llvm, "host-sysroot")
-    resdir = os.path.join(sysroot, "lib", "clang", "23")
-    tmp = YA2BEAM_SO + ".tmp"
-    cmd = [xbconfig.clang(), "--target=x86_64-w64-mingw32", "--sysroot=" + sysroot,
-           "-resource-dir", resdir, "-fuse-ld=lld", "-rtlib=compiler-rt",
-           "-unwindlib=libunwind", "-O3", "-shared", "-o", tmp, YA2BEAM_SRC]
-    r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
-    if r.returncode != 0 or not os.path.isfile(tmp):
-        say("could not build the C ADPCM encoder (%s); the pure-Python one is used"
-            % (r.stderr.strip().splitlines() or ["?"])[-1])
-        if os.path.isfile(YA2BEAM_SO):
-            os.remove(YA2BEAM_SO)
-        return
-    os.replace(tmp, YA2BEAM_SO)
-    for junk in (tmp[:-4] + ".lib", tmp[:-4] + ".exp"):
-        if os.path.isfile(junk):
-            os.remove(junk)
+    built here as a 64-bit DLL for this Python: with RXDK's host clang where
+    the RXDK has one, else with Visual Studio's C compiler. If neither can,
+    sf64_emit falls back to its pure-Python encoder (byte-identical, much
+    slower) -- never a failed build."""
+    tmpdir = tempfile.mkdtemp(prefix="ya2beam")
+    why = []
+    try:
+        for builder in (_ya2beam_clang, _ya2beam_msvc):
+            try:
+                out, err = builder(tmpdir)
+            except OSError as e:
+                out, err = None, str(e)
+            if out:
+                os.replace(out, YA2BEAM_SO)
+                return
+            why.append(err)
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+    say("could not build the C ADPCM encoder (%s); the pure-Python one is used, which is much slower"
+        % "; ".join(w for w in why if w))
+    if os.path.isfile(YA2BEAM_SO):
+        os.remove(YA2BEAM_SO)
 
 
 def step_audio():

@@ -149,7 +149,7 @@ def main():
                             "starfox64.us.rev1.uncompressed.md5")
     got = hashlib.md5(out).hexdigest()
     if os.path.exists(md5_file):
-        want = open(md5_file).read().split()[0].lower()
+        want = open(md5_file, encoding="utf-8").read().split()[0].lower()
         if got != want:
             raise SystemExit("decompress_rom: uncompressed ROM md5 %s, expected %s" % (got, want))
     with open(dst, "wb") as f:

@@ -61,7 +61,7 @@ def main():
     try:
         shutil.copy(os.path.join(ROOT, "rxdk.project.json"), tmp)
         r = subprocess.run([cli, "generate-vcxproj", "--project-root", tmp],
-                           capture_output=True, text=True)
+                           capture_output=True, text=True, encoding="utf-8", errors="replace")
         sys.stdout.write(r.stdout)
         sys.stderr.write(r.stderr)
         if r.returncode != 0:

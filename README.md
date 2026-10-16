@@ -29,7 +29,9 @@ Everything taken from it is generated on your own machine.
 * [Python](https://www.python.org/downloads/) 3.8 or later
 * [Git](https://git-scm.com/download/win)
 * [Visual Studio](https://visualstudio.microsoft.com/) 2022 or later with
-  **Desktop development with C++**, and [CMake](https://cmake.org/download/)
+  **Desktop development with C++** (it includes **C++ CMake tools for
+  Windows**, which the build uses; a separate [CMake](https://cmake.org/download/)
+  works too if it is new enough for your Visual Studio)
 * an internet connection the first time you build (the asset extractor,
   [Torch](https://github.com/HarbourMasters/Torch), is downloaded and built)
 
